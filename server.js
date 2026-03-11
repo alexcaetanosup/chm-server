@@ -80,23 +80,49 @@ app.get("/api/pacientes", (req, res) => {
   });
 });
 
+// POST PACIENTES CORRIGIDO
 app.post("/api/pacientes", (req, res) => {
-  const { CDPACIENTE, DCPACIENTE, CPF, CELULAR, SEXO } = req.body;
+  const p = req.body;
+
   Firebird.attach(options, (err, db) => {
     if (err) return res.status(500).json({ error: err.message });
-    let query, params;
-    if (CDPACIENTE) {
-      query =
-        "UPDATE PACIENTE SET DCPACIENTE=?, CPF=?, CELULAR=?, SEXO=? WHERE CDPACIENTE=?";
-      params = [DCPACIENTE.toUpperCase(), CPF, CELULAR, SEXO, CDPACIENTE];
-    } else {
-      query =
-        "INSERT INTO PACIENTE (DCPACIENTE, CPF, CELULAR, SEXO) VALUES (?, ?, ?, ?)";
-      params = [DCPACIENTE.toUpperCase(), CPF, CELULAR, SEXO];
-    }
+
+    const isUpdate = !!p.CDPACIENTE;
+
+    const query = isUpdate
+      ? `UPDATE PACIENTE SET 
+           DCPACIENTE=?, CPF=?, RG=?, CELULAR=?, TELEFONE=?, 
+           SEXO=?, CEP=?, ENDERECO=?, BAIRRO=?, CIDADE=?, 
+           UF=?, OBSERVA=? 
+         WHERE CDPACIENTE=?`
+      : `INSERT INTO PACIENTE 
+           (DCPACIENTE, CPF, RG, CELULAR, TELEFONE, SEXO, CEP, ENDERECO, BAIRRO, CIDADE, UF, OBSERVA) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+    // LÓGICA DE LIMPEZA E TRUNCAMENTO:
+    const params = [
+      p.DCPACIENTE ? p.DCPACIENTE.toUpperCase().substring(0, 60) : "",
+      p.CPF ? p.CPF.replace(/\D/g, "").substring(0, 11) : "", // Remove pontos/traços para caber em 11 chars
+      p.RG ? p.RG.replace(/\D/g, "").substring(0, 15) : "",
+      p.CELULAR ? p.CELULAR.replace(/\D/g, "").substring(0, 11) : "", // Apenas números (11 chars)
+      p.TELEFONE ? p.TELEFONE.replace(/\D/g, "").substring(0, 10) : "",
+      p.SEXO || "M",
+      p.CEP ? p.CEP.replace(/\D/g, "").substring(0, 8) : "", // Apenas números (8 chars)
+      p.ENDERECO ? p.ENDERECO.toUpperCase().substring(0, 50) : "", // Corte agressivo para 50 chars
+      p.BAIRRO ? p.BAIRRO.toUpperCase().substring(0, 30) : "",
+      p.CIDADE ? p.CIDADE.toUpperCase().substring(0, 30) : "",
+      p.UF ? p.UF.toUpperCase().substring(0, 2) : "",
+      p.OBSERVA ? p.OBSERVA.toUpperCase().substring(0, 200) : "",
+    ];
+
+    if (isUpdate) params.push(p.CDPACIENTE);
+
     db.query(query, params, (err) => {
       db.detach();
-      if (err) return res.status(500).json({ error: err.message });
+      if (err) {
+        console.error("ERRO FIREBIRD DETALHADO:", err.message);
+        return res.status(500).json({ error: err.message });
+      }
       res.status(201).json({ message: "OK" });
     });
   });
@@ -108,10 +134,12 @@ app.delete("/api/pacientes/:id", (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     db.query("DELETE FROM PACIENTE WHERE CDPACIENTE = ?", [id], (err) => {
       db.detach();
-      if (err)
+      if (err) {
         return res.status(500).json({
-          error: "Erro ao excluir: Paciente vinculado a lançamentos.",
+          error:
+            "Este paciente não pode ser excluído pois possui lançamentos vinculados.",
         });
+      }
       res.json({ message: "OK" });
     });
   });
@@ -156,14 +184,18 @@ app.delete("/api/especialidades/:id", (req, res) => {
   const { id } = req.params;
   Firebird.attach(options, (err, db) => {
     if (err) return res.status(500).json({ error: err.message });
-    db.query("DELETE FROM ESPECIALIDADE WHERE CDESPECIAL = ?", [id], (err) => {
-      db.detach();
-      if (err)
-        return res
-          .status(500)
-          .json({ error: "Erro ao excluir: Especialidade em uso." });
-      res.json({ message: "OK" });
-    });
+    db.query(
+      "DELETE FROM ESPECIALIDADE WHERE CDESPECIALIDADE = ?",
+      [id],
+      (err) => {
+        db.detach();
+        if (err)
+          return res
+            .status(500)
+            .json({ error: "Especialidade em uso por médicos." });
+        res.json({ message: "OK" });
+      },
+    );
   });
 });
 
@@ -171,27 +203,17 @@ app.delete("/api/especialidades/:id", (req, res) => {
 // 4. MÉDICOS
 // ==========================================
 app.get("/api/medicos", (req, res) => {
-  const { nome } = req.query;
   Firebird.attach(options, (err, db) => {
-    if (err) return res.status(500).json({ error: err.message });
-
-    let sql = `
-      SELECT M.CDMEDICO, M.DCMEDICO, M.CRM, M.CDESPECIALIDADE, M.CELULAR, E.DCESPECIAL 
-      FROM MEDICO M
-      LEFT JOIN ESPECIALIDADE E ON (E.CDESPECIAL = M.CDESPECIALIDADE)
-    `;
-    let params = [];
-
-    if (nome) {
-      sql += " WHERE UPPER(M.DCMEDICO) LIKE ?";
-      params = [`%${nome.toUpperCase()}%`];
+    if (err) {
+      console.error("Erro ao conectar no Firebird:", err);
+      return res.status(500).json({ error: "Erro de conexão com o banco" });
     }
-
-    sql += " ORDER BY M.DCMEDICO";
-
-    db.query(sql, params, (err, result) => {
-      db.detach();
-      if (err) return res.status(500).json({ error: err.message });
+    db.query("SELECT * FROM MEDICO ORDER BY DCMEDICO ASC", (err, result) => {
+      db.detach(); // SEMPRE desconectar
+      if (err) {
+        console.error("Erro na query de médicos:", err);
+        return res.status(500).json({ error: err.message });
+      }
       res.json(result);
     });
   });
@@ -201,41 +223,78 @@ app.post("/api/medicos", (req, res) => {
   const m = req.body;
   Firebird.attach(options, (err, db) => {
     if (err) return res.status(500).json({ error: err.message });
+
     let query, params;
+
     if (m.CDMEDICO) {
-      query =
-        "UPDATE MEDICO SET DCMEDICO=?, CRM=?, CDESPECIALIDADE=?, CELULAR=? WHERE CDMEDICO=?";
+      // UPDATE: Mantive os campos básicos, adicionei o OBSERVA
+      query = `
+        UPDATE MEDICO 
+        SET DCMEDICO=?, CRM=?, CDESPECIALIDADE=?, CELULAR=?, OBSERVA=? 
+        WHERE CDMEDICO=?`;
       params = [
         m.DCMEDICO.toUpperCase(),
         m.CRM,
         m.CDESPECIALIDADE,
         m.CELULAR,
+        m.OBSERVA || "",
         m.CDMEDICO,
       ];
     } else {
-      query =
-        "INSERT INTO MEDICO (DCMEDICO, CRM, CDESPECIALIDADE, CELULAR) VALUES (?, ?, ?, ?)";
-      params = [m.DCMEDICO.toUpperCase(), m.CRM, m.CDESPECIALIDADE, m.CELULAR];
+      // INSERT: Agora com todos os 15 campos e aspas em "FOTO-MED"
+      query = `
+        INSERT INTO MEDICO (
+          DCMEDICO, DATANASC, CPF, CRM, CDESPECIALIDADE, 
+          DCESPECIAL, CELULAR, TELEFONE, CEP, ENDERECO, 
+          BAIRRO, CIDADE, UF, OBSERVA, "FOTO-MED"
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+      params = [
+        m.DCMEDICO ? m.DCMEDICO.toUpperCase() : "",
+        m.DATANASC || null,
+        m.CPF || "",
+        m.CRM || "",
+        m.CDESPECIALIDADE || null,
+        m.DCESPECIAL || "",
+        m.CELULAR || "",
+        m.TELEFONE || "",
+        m.CEP || "",
+        m.ENDERECO || "",
+        m.BAIRRO || "",
+        m.CIDADE || "",
+        m.UF || "",
+        m.OBSERVA || "",
+        m[FOTO - MED] || "",
+      ];
     }
+
     db.query(query, params, (err) => {
       db.detach();
-      if (err) return res.status(500).json({ error: err.message });
+      if (err) {
+        console.error("ERRO NO BANCO:", err.message);
+        return res.status(500).json({ error: err.message });
+      }
       res.status(201).json({ message: "OK" });
     });
   });
 });
 
+// Rota para excluir médico
 app.delete("/api/medicos/:id", (req, res) => {
   const { id } = req.params;
   Firebird.attach(options, (err, db) => {
     if (err) return res.status(500).json({ error: err.message });
+
+    // O Firebird lançará erro se o médico estiver vinculado a atendimentos (FK)
     db.query("DELETE FROM MEDICO WHERE CDMEDICO = ?", [id], (err) => {
       db.detach();
-      if (err)
-        return res
-          .status(500)
-          .json({ error: "Erro ao excluir: Médico vinculado a atendimentos." });
-      res.json({ message: "OK" });
+      if (err) {
+        return res.status(500).json({
+          error:
+            "Não é possível excluir: Este médico possui atendimentos ou lançamentos vinculados.",
+        });
+      }
+      res.json({ message: "Médico excluído com sucesso!" });
     });
   });
 });
