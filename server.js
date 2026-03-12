@@ -1,6 +1,7 @@
 const express = require("express");
 const Firebird = require("node-firebird");
 const cors = require("cors");
+const multer = require("multer");
 
 const app = express();
 app.use(cors());
@@ -17,9 +18,26 @@ const options = {
   pageSize: 4096,
 };
 
-// ==========================================
+//======================Tratamento da Foto==========
+const storage = multer.diskStorage({
+  destination: "uploads/",
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
+});
+
+const upload = multer({ storage });
+
+app.post("/upload", upload.single("foto"), (req, res) => {
+  res.json({
+    url: "http://localhost:4000/uploads/" + req.file.filename,
+  });
+});
+
+app.use("/uploads", express.static("uploads"));
+//===========================================================
+
 // 1. DASHBOARD
-// ==========================================
 app.get("/api/dashboard/stats", (req, res) => {
   Firebird.attach(options, (err, db) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -128,6 +146,55 @@ app.post("/api/pacientes", (req, res) => {
   });
 });
 
+app.put("/api/pacientes/:id", (req, res) => {
+  const id = req.params.id;
+  const p = req.body;
+
+  Firebird.attach(options, (err, db) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    const query = `
+      UPDATE PACIENTE SET
+        DCPACIENTE=?,
+        CPF=?,
+        RG=?,
+        CELULAR=?,
+        TELEFONE=?,
+        SEXO=?,
+        CEP=?,
+        ENDERECO=?,
+        BAIRRO=?,
+        CIDADE=?,
+        UF=?,
+        OBSERVA=?
+      WHERE CDPACIENTE=?`;
+
+    const params = [
+      p.DCPACIENTE ? p.DCPACIENTE.toUpperCase().substring(0, 60) : "",
+      p.CPF ? p.CPF.replace(/\D/g, "").substring(0, 11) : "",
+      p.RG ? p.RG.replace(/\D/g, "").substring(0, 15) : "",
+      p.CELULAR ? p.CELULAR.replace(/\D/g, "").substring(0, 11) : "",
+      p.TELEFONE ? p.TELEFONE.replace(/\D/g, "").substring(0, 10) : "",
+      p.SEXO || "M",
+      p.CEP ? p.CEP.replace(/\D/g, "").substring(0, 8) : "",
+      p.ENDERECO ? p.ENDERECO.toUpperCase().substring(0, 50) : "",
+      p.BAIRRO ? p.BAIRRO.toUpperCase().substring(0, 30) : "",
+      p.CIDADE ? p.CIDADE.toUpperCase().substring(0, 30) : "",
+      p.UF ? p.UF.toUpperCase().substring(0, 2) : "",
+      p.OBSERVA ? p.OBSERVA.toUpperCase().substring(0, 200) : "",
+      id,
+    ];
+
+    db.query(query, params, (err) => {
+      db.detach();
+
+      if (err) return res.status(500).json({ error: err.message });
+
+      res.json({ message: "Paciente atualizado" });
+    });
+  });
+});
+
 app.delete("/api/pacientes/:id", (req, res) => {
   const { id } = req.params;
   Firebird.attach(options, (err, db) => {
@@ -163,19 +230,46 @@ app.get("/api/especialidades", (req, res) => {
 });
 
 app.post("/api/especialidades", (req, res) => {
-  const { CDESPECIAL, DCESPECIAL } = req.body;
+  const { DCESPECIAL } = req.body;
+
   Firebird.attach(options, (err, db) => {
     if (err) return res.status(500).json({ error: err.message });
-    let query = CDESPECIAL
-      ? "UPDATE ESPECIALIDADE SET DCESPECIAL=? WHERE CDESPECIAL=?"
-      : "INSERT INTO ESPECIALIDADE (DCESPECIAL) VALUES (?)";
-    let params = CDESPECIAL
-      ? [DCESPECIAL.toUpperCase(), CDESPECIAL]
-      : [DCESPECIAL.toUpperCase()];
-    db.query(query, params, (err) => {
+
+    const query = `
+      INSERT INTO ESPECIALIDADE (DCESPECIAL)
+      VALUES (?)
+      RETURNING CDESPECIAL
+    `;
+
+    db.query(query, [DCESPECIAL], (err, result) => {
       db.detach();
+
       if (err) return res.status(500).json({ error: err.message });
-      res.status(201).json({ message: "OK" });
+
+      res.json(result[0]);
+    });
+  });
+});
+
+app.put("/api/especialidades/:id", (req, res) => {
+  const id = req.params.id;
+  const { DCESPECIAL } = req.body;
+
+  Firebird.attach(options, (err, db) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    const query = `
+      UPDATE ESPECIALIDADE
+      SET DCESPECIAL = ?
+      WHERE CDESPECIAL = ?
+    `;
+
+    db.query(query, [DCESPECIAL, id], (err) => {
+      db.detach();
+
+      if (err) return res.status(500).json({ error: err.message });
+
+      res.json({ message: "Atualizado com sucesso" });
     });
   });
 });
@@ -275,6 +369,54 @@ app.post("/api/medicos", (req, res) => {
         return res.status(500).json({ error: err.message });
       }
       res.status(201).json({ message: "OK" });
+    });
+  });
+});
+
+app.put("/api/medicos/:id", (req, res) => {
+  const id = req.params.id;
+  const m = req.body;
+
+  Firebird.attach(options, (err, db) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    const query = `
+      UPDATE MEDICO
+      SET
+        DCMEDICO=?,
+        CRM=?,
+        CDESPECIALIDADE=?,
+        CELULAR=?,
+        TELEFONE=?,
+        CEP=?,
+        ENDERECO=?,
+        BAIRRO=?,
+        CIDADE=?,
+        UF=?,
+        OBSERVA=?
+      WHERE CDMEDICO=?`;
+
+    const params = [
+      m.DCMEDICO,
+      m.CRM,
+      m.CDESPECIALIDADE,
+      m.CELULAR,
+      m.TELEFONE,
+      m.CEP,
+      m.ENDERECO,
+      m.BAIRRO,
+      m.CIDADE,
+      m.UF,
+      m.OBSERVA,
+      id,
+    ];
+
+    db.query(query, params, (err) => {
+      db.detach();
+
+      if (err) return res.status(500).json({ error: err.message });
+
+      res.json({ message: "Atualizado" });
     });
   });
 });
