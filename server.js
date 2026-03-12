@@ -1,3 +1,27 @@
+// -----------------------------
+// SANITIZAÇÃO PARA FIREBIRD
+// -----------------------------
+
+function toInteger(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const n = parseInt(value);
+  return isNaN(n) ? null : n;
+}
+
+function toFloat(value) {
+  if (value === null || value === undefined || value === "") return null;
+
+  const n = parseFloat(String(value).replace(/\./g, "").replace(",", "."));
+
+  return isNaN(n) ? null : n;
+}
+
+function toDate(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 const express = require("express");
 const Firebird = require("node-firebird");
 const cors = require("cors");
@@ -35,6 +59,7 @@ app.post("/upload", upload.single("foto"), (req, res) => {
 });
 
 app.use("/uploads", express.static("uploads"));
+
 //===========================================================
 
 // 1. DASHBOARD
@@ -256,7 +281,10 @@ app.put("/api/especialidades/:id", (req, res) => {
   const { DCESPECIAL } = req.body;
 
   Firebird.attach(options, (err, db) => {
-    if (err) return res.status(500).json({ error: err.message });
+    if (err) {
+      console.error("ERRO AO INSERIR PARCELA:", err);
+      return res.status(500).json({ error: err.message });
+    }
 
     const query = `
       UPDATE ESPECIALIDADE
@@ -358,7 +386,7 @@ app.post("/api/medicos", (req, res) => {
         m.CIDADE || "",
         m.UF || "",
         m.OBSERVA || "",
-        m[FOTO - MED] || "",
+        m["FOTO-MED"] || "",
       ];
     }
 
@@ -441,9 +469,7 @@ app.delete("/api/medicos/:id", (req, res) => {
   });
 });
 
-// ==========================================
 // 5. LANÇAMENTOS (PARCELAM)
-// ==========================================
 app.get("/api/lancamentos", (req, res) => {
   Firebird.attach(options, (err, db) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -465,30 +491,65 @@ app.get("/api/lancamentos", (req, res) => {
   });
 });
 
+// GRAVAR LANÇAMENTOS...
 app.post("/api/lancamentos", (req, res) => {
   const l = req.body;
+
+  const planoMap = {
+    PARTICULAR: 1,
+    UNIMED: 2,
+    AMIL: 3,
+  };
+
+  const plano = planoMap[l.PLANO] || 1;
+
   Firebird.attach(options, (err, db) => {
     if (err) return res.status(500).json({ error: err.message });
-    const query = `
-      INSERT INTO PARCELAM (DATATEND, DTPARCELA, VLPARCELA, CDPACIENTE, CDMEDICO, CDESPECIAL, PLANO, ABERTO, PARCELA)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-    const params = [
-      l.DATATEND,
-      l.DTPARCELA,
-      l.VLPARCELA,
-      l.CDPACIENTE,
-      l.CDMEDICO,
-      l.CDESPECIAL,
-      l.PLANO,
-      "S",
-      1,
-    ];
-    db.query(query, params, (err) => {
-      db.detach();
-      if (err) return res.status(500).json({ error: err.message });
-      res.status(201).json({ message: "OK" });
-    });
+
+    // 🔹 pega número único
+    db.query(
+      "SELECT NEXT VALUE FOR GEN_NRVENDA AS NRVENDA FROM RDB$DATABASE",
+      (err, result) => {
+        if (err) {
+          db.detach();
+          return res.status(500).json(err);
+        }
+
+        const nrVenda = result[0].NRVENDA;
+
+        const query = `
+          INSERT INTO PARCELAM
+          (NRVENDA, DTPARCELA, VLPARCELA, CDPACIENTE, PLANO, PARCELA, DATATEND, CDESPECIAL, CDMEDICO, ABERTO)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        const params = [
+          nrVenda,
+          toDate(l.DTPARCELA),
+          toFloat(l.VLPARCELA),
+          toInteger(l.CDPACIENTE),
+          plano,
+          toInteger(l.PARCELA),
+          toDate(l.DATATEND),
+          toInteger(l.CDESPECIAL),
+          toInteger(l.CDMEDICO),
+          1,
+        ];
+
+        console.log("INSERT PARCELAM:", params);
+
+        db.query(query, params, (err) => {
+          db.detach();
+
+          if (err) {
+            console.error("ERRO AO INSERIR:", err);
+            return res.status(500).json({ error: err.message });
+          }
+
+          res.status(201).json({ message: "OK", nrVenda });
+        });
+      },
+    );
   });
 });
 
