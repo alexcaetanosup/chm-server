@@ -1,7 +1,6 @@
 // -----------------------------
 // SANITIZAÇÃO PARA FIREBIRD
 // -----------------------------
-
 function toInteger(value) {
   if (value === null || value === undefined || value === "") return null;
   const n = parseInt(value);
@@ -67,7 +66,7 @@ app.get("/api/dashboard/stats", (req, res) => {
   Firebird.attach(options, (err, db) => {
     if (err) return res.status(500).json({ error: err.message });
     const sql = `
-      SELECT 
+      SELECT
         CAST(COUNT(*) AS INTEGER) as TOTAL_ATENDIMENTOS,
         CAST(COALESCE(SUM(VLPARCELA), 0) AS DOUBLE PRECISION) as FATURAMENTO_TOTAL,
         CAST(COALESCE(SUM(CASE WHEN ABERTO = 'S' THEN VLPARCELA ELSE 0 END), 0) AS DOUBLE PRECISION) as TOTAL_PENDENTE,
@@ -103,7 +102,6 @@ app.get("/api/pacientes", (req, res) => {
       // para o .map() do React não quebrar o sistema.
       return res.status(500).json([]);
     }
-
     // Verifique se os nomes das colunas abaixo existem exatamente assim no seu FDB
     const sql =
       "SELECT CDPACIENTE, DCPACIENTE, CPF, CELULAR, SEXO FROM PACIENTE ORDER BY DCPACIENTE";
@@ -133,13 +131,13 @@ app.post("/api/pacientes", (req, res) => {
     const isUpdate = !!p.CDPACIENTE;
 
     const query = isUpdate
-      ? `UPDATE PACIENTE SET 
-           DCPACIENTE=?, CPF=?, RG=?, CELULAR=?, TELEFONE=?, 
-           SEXO=?, CEP=?, ENDERECO=?, BAIRRO=?, CIDADE=?, 
-           UF=?, OBSERVA=? 
+      ? `UPDATE PACIENTE SET
+           DCPACIENTE=?, CPF=?, RG=?, CELULAR=?, TELEFONE=?,
+           SEXO=?, CEP=?, ENDERECO=?, BAIRRO=?, CIDADE=?,
+           UF=?, OBSERVA=?
          WHERE CDPACIENTE=?`
-      : `INSERT INTO PACIENTE 
-           (DCPACIENTE, CPF, RG, CELULAR, TELEFONE, SEXO, CEP, ENDERECO, BAIRRO, CIDADE, UF, OBSERVA) 
+      : `INSERT INTO PACIENTE
+           (DCPACIENTE, CPF, RG, CELULAR, TELEFONE, SEXO, CEP, ENDERECO, BAIRRO, CIDADE, UF, OBSERVA)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
     // LÓGICA DE LIMPEZA E TRUNCAMENTO:
@@ -351,8 +349,8 @@ app.post("/api/medicos", (req, res) => {
     if (m.CDMEDICO) {
       // UPDATE: Mantive os campos básicos, adicionei o OBSERVA
       query = `
-        UPDATE MEDICO 
-        SET DCMEDICO=?, CRM=?, CDESPECIALIDADE=?, CELULAR=?, OBSERVA=? 
+        UPDATE MEDICO
+        SET DCMEDICO=?, CRM=?, CDESPECIALIDADE=?, CELULAR=?, OBSERVA=?
         WHERE CDMEDICO=?`;
       params = [
         m.DCMEDICO.toUpperCase(),
@@ -366,8 +364,8 @@ app.post("/api/medicos", (req, res) => {
       // INSERT: Agora com todos os 15 campos e aspas em "FOTO-MED"
       query = `
         INSERT INTO MEDICO (
-          DCMEDICO, DATANASC, CPF, CRM, CDESPECIALIDADE, 
-          DCESPECIAL, CELULAR, TELEFONE, CEP, ENDERECO, 
+          DCMEDICO, DATANASC, CPF, CRM, CDESPECIALIDADE,
+          DCESPECIAL, CELULAR, TELEFONE, CEP, ENDERECO,
           BAIRRO, CIDADE, UF, OBSERVA, "FOTO-MED"
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
@@ -469,13 +467,13 @@ app.delete("/api/medicos/:id", (req, res) => {
   });
 });
 
-// 5. LANÇAMENTOS (PARCELAM)
+//5. LANÇAMENTOS (PARCELAM)
 app.get("/api/lancamentos", (req, res) => {
   Firebird.attach(options, (err, db) => {
     if (err) return res.status(500).json({ error: err.message });
     const sql = `
-      SELECT 
-        P.NRVENDA, P.DATATEND, P.DTPARCELA, P.VLPARCELA, P.ABERTO, 
+      SELECT
+        P.NRVENDA, P.DATATEND, P.DTPARCELA, P.VLPARCELA, P.ABERTO,
         PAC.DCPACIENTE AS PACIENTE, M.DCMEDICO AS MEDICO, E.DCESPECIAL AS ESPECIALIDADE
       FROM PARCELAM P
       LEFT JOIN PACIENTE PAC ON (PAC.CDPACIENTE = P.CDPACIENTE)
@@ -500,12 +498,9 @@ app.post("/api/lancamentos", (req, res) => {
     UNIMED: 2,
     AMIL: 3,
   };
-
   const plano = planoMap[l.PLANO] || 1;
-
   Firebird.attach(options, (err, db) => {
     if (err) return res.status(500).json({ error: err.message });
-
     // 🔹 pega número único
     db.query(
       "SELECT NEXT VALUE FOR GEN_NRVENDA AS NRVENDA FROM RDB$DATABASE",
@@ -514,15 +509,12 @@ app.post("/api/lancamentos", (req, res) => {
           db.detach();
           return res.status(500).json(err);
         }
-
         const nrVenda = result[0].NRVENDA;
-
         const query = `
           INSERT INTO PARCELAM
           (NRVENDA, DTPARCELA, VLPARCELA, CDPACIENTE, PLANO, PARCELA, DATATEND, CDESPECIAL, CDMEDICO, ABERTO)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-
         const params = [
           nrVenda,
           toDate(l.DTPARCELA),
@@ -586,8 +578,3 @@ const PORT = process.env.PORT || 4000; // Garanta que aqui seja 4000
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
-
-// const PORT = 4000;
-// app.listen(PORT, () => {
-//   console.log(`🚀 Servidor CHM v2 rodando em http://localhost:${PORT}`);
-// });
