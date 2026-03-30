@@ -1,3 +1,7 @@
+const path = require("path");
+const fs = require("fs");
+const { exec } = require("child_process");
+
 // -----------------------------
 // SANITIZAÇÃO PARA FIREBIRD
 // -----------------------------
@@ -572,6 +576,99 @@ app.delete("/api/lancamentos/:id", (req, res) => {
     });
   });
 });
+
+// Rota de Backup (Firebird)
+app.post("/api/backup/firebird", (req, res) => {
+  const { tipo } = req.body; // DIARIO, MENSAL ou ANUAL
+
+  const agora = new Date();
+  const ano = agora.getFullYear().toString();
+  const mes = (agora.getMonth() + 1).toString().padStart(2, "0");
+  const dia = agora.getDate().toString().padStart(2, "0");
+  const hora = agora.getHours().toString().padStart(2, "0");
+  const minuto = agora.getMinutes().toString().padStart(2, "0");
+
+  // 1. Localiza o GBAK na raiz do seu servidor
+  const GBAK_PATH = path.resolve(__dirname, "gbak.exe");
+
+  // 2. Define a estrutura conforme solicitado: C:\WWW\Backups\2026\03\30\DIARIO\
+  const DESTINO_DIR = path.join("C:", "WWW", "Backups", ano, mes, dia, tipo);
+
+  try {
+    // Cria as pastas caso não existam
+    if (!fs.existsSync(DESTINO_DIR)) {
+      fs.mkdirSync(DESTINO_DIR, { recursive: true });
+    }
+
+    // 3. Nome do arquivo com timestamp para não sobrescrever
+    const NOME_ARQUIVO = `BACKUP_CHM_${hora}${minuto}.FBK`;
+    const CAMINHO_COMPLETO = path.join(DESTINO_DIR, NOME_ARQUIVO);
+
+    // Caminho do banco e credenciais
+    const DB_PATH = "C:\\WWW\\CHM\\chm-server\\CHM.FDB";
+    const USER = "SYSDBA";
+    const PASS = "masterkey";
+
+    // 4. Montagem do Comando GBAK (aspas duplas para evitar erros de espaços)
+    const comando = `"${GBAK_PATH}" -v -t -user ${USER} -password ${PASS} "${DB_PATH}" "${CAMINHO_COMPLETO}"`;
+
+    console.log("------------------------------------------");
+    console.log(`GERANDO BACKUP EM: ${DESTINO_DIR}`);
+    console.log("------------------------------------------");
+
+    // 5. Execução do Processo via CLI
+    exec(comando, (error, stdout, stderr) => {
+      if (error) {
+        console.error("ERRO GBAK:", stderr || error.message);
+        return res.status(500).json({
+          erro: "Falha na extração GBAK",
+          detalhe: stderr || error.message,
+        });
+      }
+
+      console.log(`SUCESSO: ${NOME_ARQUIVO} criado.`);
+      res.json({
+        mensagem: "Backup FBK gerado com sucesso!",
+        arquivo: CAMINHO_COMPLETO,
+        timestamp: `${dia}/${mes}/${ano} às ${hora}:${minuto}`,
+      });
+    });
+  } catch (err) {
+    console.error("ERRO DE SISTEMA:", err.message);
+    res
+      .status(500)
+      .json({ erro: "Erro ao gerenciar pastas", detalhe: err.message });
+  }
+});
+
+// const { exec } = require("child_process");
+// const path = require("path");
+
+// app.post("/api/backup/firebird", (req, res) => {
+//   const { tipo } = req.body;
+//   const dataAtual = new Date().toISOString().split("T")[0].replace(/-/g, "");
+
+//   // Caminho dinâmico para o gbak dentro da sua pasta src
+//   // __dirname pega a pasta atual do arquivo, subimos e entramos em src
+//   const GBAK_PATH = path.join(__dirname, "src", "gbak.exe");
+
+//   const DB_PATH = '"C:\\WWW\CHM\chm-server\CHM.FDB"'; // Seu banco real
+//   const BACKUP_DIR = `C:\\WWW\Backups\\${tipo}\\`;
+//   const BACKUP_FILE = `${BACKUP_DIR}CHM_${tipo}_${dataAtual}.FBK`;
+
+//   // Comando usando o gbak que está na sua pasta src
+//   const comando = `"${GBAK_PATH}" -v -t -user SYSDBA -password masterkey ${DB_PATH} ${BACKUP_FILE}`;
+
+//   exec(comando, (error, stdout, stderr) => {
+//     if (error) {
+//       console.error(`Erro GBAK: ${stderr}`);
+//       return res
+//         .status(500)
+//         .json({ erro: "Falha no processo GBAK", detalhe: stderr });
+//     }
+//     res.json({ mensagem: "Backup concluído!", arquivo: BACKUP_FILE });
+//   });
+// });
 
 // --- INICIALIZAÇÃO ---
 const PORT = process.env.PORT || 4000; // Garanta que aqui seja 4000
