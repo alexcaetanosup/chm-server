@@ -676,7 +676,9 @@ Você conhece todas as funcionalidades do sistema:
 - ASSISTENTE IA: Chat inteligente para tirar dúvidas sobre o sistema.
 - WhatsApp: Botão VERDE a ESQUERDA para contato via WhatsApp.
 - Suporte Técnico: Botão AZUL a DIREITA para contato técnico.
-- Lançamentos: Antes de lançar novo valores, verificar se o paciente e o médico estão cadastrados.`,
+- Lançamentos: Antes de lançar novo valores, verificar se o paciente e o médico estão cadastrados.
+- Na dashboard, os gráficos mostram o faturamento mensal e a evolução dos pagamentos.
+- Documentação do Paciente: No cadastro do paciente, é possível adicionar observações importantes sobre o histórico do paciente, como alergias, preferências de contato ou informações relevantes para o atendimento médico.`,
 
           // Se a pergunta não for sobre o sistema CHM, responda:
           // "Só posso responder perguntas sobre o sistema CHM."`,
