@@ -1,3 +1,4 @@
+require("dotenv").config();
 const path = require("path");
 const fs = require("fs");
 const { exec } = require("child_process");
@@ -641,33 +642,94 @@ app.post("/api/backup/firebird", (req, res) => {
   }
 });
 
-// const { exec } = require("child_process");
-// const path = require("path");
+// 6. ROTA DE IA
+const BASE_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
-// app.post("/api/backup/firebird", (req, res) => {
-//   const { tipo } = req.body;
-//   const dataAtual = new Date().toISOString().split("T")[0].replace(/-/g, "");
+const Groq = require("groq-sdk");
 
-//   // Caminho dinâmico para o gbak dentro da sua pasta src
-//   // __dirname pega a pasta atual do arquivo, subimos e entramos em src
-//   const GBAK_PATH = path.join(__dirname, "src", "gbak.exe");
+app.post("/api/ai", async (req, res) => {
+  try {
+    const prompt = req.body.prompt || req.body.message;
+    if (!prompt) {
+      return res.status(400).json({ error: "Mensagem não enviada" });
+    }
 
-//   const DB_PATH = '"C:\\WWW\CHM\chm-server\CHM.FDB"'; // Seu banco real
-//   const BACKUP_DIR = `C:\\WWW\Backups\\${tipo}\\`;
-//   const BACKUP_FILE = `${BACKUP_DIR}CHM_${tipo}_${dataAtual}.FBK`;
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-//   // Comando usando o gbak que está na sua pasta src
-//   const comando = `"${GBAK_PATH}" -v -t -user SYSDBA -password masterkey ${DB_PATH} ${BACKUP_FILE}`;
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        {
+          role: "system",
+          content: `Você é um assistente virtual do sistema CHM - Caixa de Honorários Médicos.
+Responda SEMPRE em português, de forma curta e direta (máximo 5 linhas).
+Você conhece todas as funcionalidades do sistema:
 
-//   exec(comando, (error, stdout, stderr) => {
-//     if (error) {
-//       console.error(`Erro GBAK: ${stderr}`);
-//       return res
-//         .status(500)
-//         .json({ erro: "Falha no processo GBAK", detalhe: stderr });
+- PACIENTES: Cadastro de pacientes com nome, CPF, celular, sexo e endereço.
+- MÉDICOS: Cadastro de médicos com CRM, especialidade, contato e foto.
+- ESPECIALIDADES: Cadastro das especialidades médicas.
+- FINANCEIRO (Lançamentos): Registro de atendimentos com valor, data, paciente, médico e especialidade. É possível marcar como pago.
+- RELATÓRIOS: Painel Geral com filtros de período e Analítico de Itens.
+- DASHBOARD: Gráficos e estatísticas de faturamento, pagamentos e pendências.
+- BACKUP: Gera backup do banco Firebird nos tipos Diário, Mensal ou Anual, salvando em C:\\\\WWW\\\\Backups.
+- ASSISTENTE IA: Chat inteligente para tirar dúvidas sobre o sistema.
+- WhatsApp: Botão VERDE a ESQUERDA para contato via WhatsApp.
+- Suporte Técnico: Botão AZUL a DIREITA para contato técnico.
+- Lançamentos: Antes de lançar novo valores, verificar se o paciente e o médico estão cadastrados.`,
+
+          // Se a pergunta não for sobre o sistema CHM, responda:
+          // "Só posso responder perguntas sobre o sistema CHM."`,
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      max_tokens: 1024,
+    });
+
+    const aiText =
+      completion.choices[0]?.message?.content || "Sem resposta da IA";
+    res.json({ text: aiText });
+  } catch (err) {
+    console.error("Erro interno IA:", err);
+    res.status(500).json({ error: "Erro interno IA", detalhe: err.message });
+  }
+});
+
+// app.post("/api/ai", async (req, res) => {
+//   try {
+//     const prompt = req.body.prompt || req.body.message;
+//     if (!prompt) {
+//       return res.status(400).json({ error: "Mensagem não enviada" });
 //     }
-//     res.json({ mensagem: "Backup concluído!", arquivo: BACKUP_FILE });
-//   });
+
+//     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+//     const completion = await groq.chat.completions.create({
+//       model: "llama-3.3-70b-versatile",
+//       messages: [
+//         {
+//           role: "system",
+//           content:
+//             "Você é um assistente especializado em gestão de honorários médicos. Responda sempre em português.",
+//         },
+//         {
+//           role: "user",
+//           content: prompt,
+//         },
+//       ],
+//       max_tokens: 1024,
+//     });
+
+//     const aiText =
+//       completion.choices[0]?.message?.content || "Sem resposta da IA";
+//     res.json({ text: aiText });
+//   } catch (err) {
+//     console.error("Erro interno IA:", err);
+//     res.status(500).json({ error: "Erro interno IA", detalhe: err.message });
+//   }
 // });
 
 // --- INICIALIZAÇÃO ---
