@@ -1,0 +1,341 @@
+.container {
+  padding: 20px 30px;
+  background-color: #fff;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.titleInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.iconCircle {
+  background-color: #0ea5e9; /* Azul do seu ícone de Médicos */
+  padding: 10px;
+  border-radius: 50%; /* No print parece circular */
+  display: flex;
+  align-items: center;
+}
+
+.titleInfo h1 {
+  font-size: 1.25rem;
+  color: #1e293b;
+  margin: 0;
+  font-weight: 700;
+}
+
+.titleInfo p {
+  color: #64748b;
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+/* --- Botão Novo (Igual ao seu "Novo Médico") --- */
+.btnPrimary {
+  background-color: #0ea5e9;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* --- Tabela Estilo "Corpo Clínico" --- */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  position: relative; /* Necessário para o sticky funcionar corretamente */
+}
+
+.table thead th {
+  /* O SEGREDO ESTÁ AQUI */
+  position: sticky;
+  top: 0; /* Gruda no topo do container .tableCard */
+  background-color: #f8fafc; /* Cor de fundo para não ficar transparente */
+  z-index: 10; /* Garante que fique acima das linhas da tabela */
+  padding: 15px;
+  text-align: left;
+  color: #64748b;
+  font-weight: 600;
+  border-bottom: 2px solid #e2e8f0;
+  box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.05); /* Sombra leve para destacar que está fixo */
+}
+
+/* Ajuste das células para não vazarem */
+.table td {
+  padding: 4px 15px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+/* Container que envolve a tabela */
+.tableCard {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  overflow: auto; /* Permite o scroll interno se a tabela for grande */
+  max-height: 70vh; /* Define uma altura máxima para o scroll aparecer aqui */
+}
+
+/* Badges de Status */
+.statusBadge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.pago {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+.pendente {
+  background-color: #fef3c7;
+  color: #0369a1;
+}
+
+/* Modal Seguindo o Padrão */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 41, 59, 0.4); /* Overlay mais suave */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background: white;
+  border-radius: 12px;
+  width: 550px;
+  overflow: hidden; /* Para o box do X encostar na borda */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-left: 24px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.modalHeader h2 {
+  font-size: 1.1rem;
+  color: #1a202c;
+  font-weight: 700;
+}
+
+/* O botão X quadrado idêntico ao de pacientes */
+.btnCloseBox {
+  padding: 20px;
+  border: none;
+  background: none;
+  border-left: 1px solid #edf2f7;
+  cursor: pointer;
+  color: #4a5568;
+  transition: background 0.2s;
+}
+
+.btnCloseBox:hover {
+  background: #fff5f5;
+  color: #0ea5e9;
+}
+
+.modalForm {
+  padding: 24px;
+}
+
+/* Garante que cada grupo (label + input) ocupe o mesmo espaço */
+.formGroup {
+  flex: 1; /* Faz com que Médico e Especialidade tenham larguras iguais */
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* Evita que o input "estoure" o container */
+}
+
+.formGroup label {
+  display: block;
+  font-size: 0.75rem;
+  color: #718096;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+/* Estilo padrão para todos os inputs do modal */
+.formGroup input,
+.formGroup select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-top: 5px;
+  box-sizing: border-box; /* Essencial para o padding não somar na largura */
+}
+
+/* Container que agrupa Médico e Especialidade */
+.formRow {
+  display: flex;
+  gap: 15px; /* Cria um espaço real entre os inputs */
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+/* Ações do Modal (Botões de baixo) */
+.modalActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start; /* Alinha o botão à esquerda como no print */
+  margin-top: 10px;
+}
+
+.btnCancel {
+  background: none;
+  border: 1px solid #e2e8f0;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.btnConfirm {
+  background: #10b981; /* Verde do Salvar Alterações */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.valorCol {
+  text-align: right;
+}
+/* Container da barra de pesquisa */
+.searchSection {
+  margin: 0 0 25px 0; /* Margem apenas embaixo para separar da tabela */
+  padding: 0 4px; /* Pequeno recuo lateral para não encostar na borda da tela */
+  display: flex;
+  justify-content: flex-start;
+  width: 40%;
+}
+
+.searchWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 450px;
+}
+
+/* Ícone de lupa dentro do input */
+.searchIcon {
+  position: absolute;
+  left: 15px; /* Distância fixa da borda esquerda do input */
+  color: #94a3b8;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* O Input propriamente dito */
+.searchInput {
+  width: 100%;
+  /* O padding-left de 45px garante que o texto comece 
+       sempre depois do ícone, mantendo o padrão */
+  padding: 12px 15px 12px 45px;
+  font-size: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background-color: #ffffff;
+  color: #1e293b;
+  transition: all 0.2s ease;
+  outline: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Efeito de clique/foco */
+.searchInput:focus {
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+/* Estilo para o placeholder */
+.searchInput::placeholder {
+  color: #94a3b8;
+}
+
+/* Se a tela for pequena, eles ficam um embaixo do outro */
+@media (max-width: 600px) {
+  .formRow {
+    flex-direction: column;
+  }
+}
+
+.valorDireita {
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.relatorio {
+  width: 100%;
+  max-width: 100%;
+}
+.tabelaLancamentos {
+  width: 100%;
+  border-collapse: collapse;
+}
+.tabelaLancamentos {
+  width: 100%;
+  border-collapse: collapse;
+}
+.tabelaRelatorio {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th:last-child,
+.table td:last-child {
+  text-align: right;
+}
+
+.valorDireita {
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding-right: 10px;
+}

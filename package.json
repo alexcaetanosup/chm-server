@@ -1,0 +1,36 @@
+{
+  "name": "chm",
+  "version": "1.0.0",
+  "description": "Aplicativo CHM - Caixa de Honorários Médicos",
+  "keywords": [],
+  "homepage": "https://github.com/alexcaetanosup/chm-app#readme",
+  "bugs": {
+    "url": "https://github.com/alexcaetanosup/chm-app/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexcaetanosup/chm-app.git"
+  },
+  "license": "ISC",
+  "author": "Alex Caetano dos Santos",
+  "type": "React TypeScript",
+  "main": "index.js",
+  "scripts": {
+    "server": "npm start --prefix chm-server",
+    "client": "npm start --prefix chm-app",
+    "dev": "concurrently \"npm run server\" \"npm run client\""
+  },
+  "dependencies": {
+    "axios": "^1.13.6",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "node-fetch": "^2.7.0",
+    "recharts": "^3.8.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

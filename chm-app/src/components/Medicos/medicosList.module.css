@@ -1,0 +1,103 @@
+.medico-container {
+  padding: 30px;
+  background-color: #f4f7f6;
+  min-height: 100vh;
+}
+.medico-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+.medico-header h1 {
+  color: #333;
+  font-size: 24px;
+  font-weight: 600;
+}
+.btn-novo {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: bold;
+}
+
+.busca-wrapper {
+  margin-bottom: 20px;
+}
+.busca-input-container {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px 15px;
+  width: 100%;
+  max-width: 500px;
+}
+.busca-input-container input {
+  border: none;
+  outline: none;
+  width: 100%;
+  margin-left: 10px;
+  font-size: 16px;
+}
+.icon-lupa {
+  color: #888;
+}
+
+.tabela-wrapper {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+.tabela-premium {
+  width: 100%;
+  border-collapse: collapse;
+}
+.tabela-premium th {
+  background-color: #004a8d;
+  color: white;
+  text-align: left;
+  padding: 15px;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+.tabela-premium td {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+  color: #555;
+  font-size: 15px;
+}
+.nome-destaque {
+  font-weight: bold;
+  color: #004a8d;
+}
+
+.acoes-botoes {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+.btn-acao {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 18px;
+  transition: 0.2s;
+}
+.btn-acao.edit {
+  color: #ffc107;
+}
+.btn-acao.delete {
+  color: #dc3545;
+}
+.btn-acao:hover {
+  transform: scale(1.2);
+}
