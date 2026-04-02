@@ -2,26 +2,29 @@
   "name": "chm-server",
   "version": "1.0.0",
   "description": "��#\u0000 \u0000c\u0000h\u0000m\u0000-\u0000s\u0000e\u0000r\u0000v\u0000e\u0000r\u0000\r\u0000 \u0000",
-  "main": "server.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+  "keywords": [],
+  "homepage": "https://github.com/alexcaetanosup/chm-server#readme",
+  "bugs": {
+    "url": "https://github.com/alexcaetanosup/chm-server/issues"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/alexcaetanosup/chm-server.git"
   },
-  "keywords": [],
-  "author": "",
   "license": "ISC",
+  "author": "",
   "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/alexcaetanosup/chm-server/issues"
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "dev": "concurrently \"cd chm-server && node server.js\" \"cd chm-app && npm start\""
   },
-  "homepage": "https://github.com/alexcaetanosup/chm-server#readme",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
+    "concurrently": "^9.2.1",
     "cors": "^2.8.6",
+    "dotenv": "^17.4.0",
     "express": "^5.2.1",
     "groq-sdk": "^1.1.2",
     "lucide-react": "^0.577.0",
