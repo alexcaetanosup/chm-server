@@ -8,6 +8,11 @@ const Firebird = require("node-firebird");
 const cors = require("cors");
 const multer = require("multer");
 
+// =============================================================
+// 🤖 IMPORTAR RPA FIREBIRD → MONGODB
+// =============================================================
+const { executarMigracao } = require("./migrate-firebird-to-mongodb");
+
 const app = express();
 
 // =============================================================
@@ -717,6 +722,45 @@ app.post("/api/backup/firebird", (req, res) => {
   }
 });
 
+// =============================================================
+// 7. ROTA RPA: MIGRAÇÃO FIREBIRD → MONGODB
+// =============================================================
+/**
+ * Endpoint: POST /api/migrate
+ * Descrição: Executa a migração de dados do Firebird para MongoDB
+ * Body: { mongoUrl: "mongodb+srv://..." }
+ * Resposta: { sucesso: boolean, resultados: {...}, tempo: string }
+ */
+app.post("/api/migrate", async (req, res) => {
+  try {
+    const { mongoUrl } = req.body;
+
+    if (!mongoUrl) {
+      return res.status(400).json({
+        erro: "MongoDB URL não fornecida",
+        dica: "Inclua 'mongoUrl' no body da requisição",
+      });
+    }
+
+    console.log("\n🤖 RPA INICIADA via API...\n");
+
+    // Executar migração
+    const resultado = await executarMigracao(mongoUrl);
+
+    if (resultado.sucesso) {
+      res.json(resultado);
+    } else {
+      res.status(500).json(resultado);
+    }
+  } catch (err) {
+    console.error("Erro na RPA:", err);
+    res.status(500).json({
+      sucesso: false,
+      erro: err.message,
+    });
+  }
+});
+
 // 6. ROTA DE IA
 const Groq = require("groq-sdk");
 
@@ -776,11 +820,17 @@ Você conhece todas as funcionalidades do sistema:
 const PORT_FINAL = process.env.PORT || 4000;
 app.listen(PORT_FINAL, () => {
   console.log(`🚀 SERVIDOR CHM RODANDO NA PORTA ${PORT_FINAL}`);
-  console.log(`\n=============================================================`);
+  console.log(
+    `\n=============================================================`,
+  );
   console.log(`📊 CONFIGURAÇÃO ATUAL:`);
   console.log(`   🖥️  SO: ${isWindows ? "Windows" : "Linux/AWS"}`);
   console.log(`   📁 Banco: ${dbPath}`);
   console.log(`   📸 Uploads: ${uploadDir}`);
-  console.log(`   🔒 CORS: ${JSON.stringify(corsOptions.origin).substring(0, 50)}...`);
-  console.log(`=============================================================\n`);
+  console.log(
+    `   🔒 CORS: ${JSON.stringify(corsOptions.origin).substring(0, 50)}...`,
+  );
+  console.log(
+    `=============================================================\n`,
+  );
 });

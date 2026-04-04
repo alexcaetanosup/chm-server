@@ -1,0 +1,278 @@
+/**
+ * ============================================================
+ * 🎨 ESTILOS: RPA FIREBIRD → MONGODB
+ * ============================================================
+ */
+
+.rpa-container {
+  max-width: 900px;
+  margin: 20px auto;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  color: white;
+}
+
+.rpa-header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.rpa-header h2 {
+  font-size: 28px;
+  margin: 0 0 10px 0;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.rpa-header p {
+  font-size: 14px;
+  opacity: 0.9;
+  margin: 0;
+}
+
+/* ============================================================
+   BOTÃO
+   ============================================================ */
+.rpa-button-group {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.rpa-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 40px;
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+  background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 153, 255, 0.4);
+}
+
+.rpa-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 153, 255, 0.6);
+}
+
+.rpa-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.rpa-button.loading {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+}
+
+.rpa-button.sucesso {
+  background: linear-gradient(135deg, #51cf66 0%, #37b24d 100%);
+}
+
+.rpa-button.erro {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+}
+
+.rpa-button .icon {
+  font-size: 20px;
+}
+
+.rpa-button .spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================================
+   STATUS
+   ============================================================ */
+.rpa-status {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-weight: 600;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.status-sucesso {
+  background: rgba(81, 207, 102, 0.2);
+  border-left: 4px solid #51cf66;
+  color: #c3fae8;
+}
+
+.status-erro {
+  background: rgba(255, 107, 107, 0.2);
+  border-left: 4px solid #ff6b6b;
+  color: #ffa8a8;
+}
+
+.status-icon {
+  font-size: 20px;
+}
+
+/* ============================================================
+   LOGS
+   ============================================================ */
+.rpa-logs {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.rpa-logs h3 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  color: #00d4ff;
+}
+
+.logs-content {
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 6px;
+  padding: 15px;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  color: #00ff00;
+  line-height: 1.6;
+}
+
+.logs-content pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Scroll customizado */
+.logs-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.logs-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.logs-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.logs-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* ============================================================
+   RESULTADO
+   ============================================================ */
+.rpa-resultado {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.rpa-resultado h3 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  color: #00d4ff;
+}
+
+.resultado-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.resultado-item {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 212, 255, 0.2),
+    rgba(0, 153, 255, 0.2)
+  );
+  border: 1px solid rgba(0, 212, 255, 0.5);
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.resultado-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 212, 255, 0.3);
+}
+
+.resultado-item .item-label {
+  display: block;
+  font-size: 12px;
+  opacity: 0.8;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.resultado-item .item-value {
+  display: block;
+  font-size: 32px;
+  font-weight: bold;
+  color: #00ff88;
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+  .rpa-container {
+    margin: 10px;
+    padding: 15px;
+  }
+
+  .rpa-header h2 {
+    font-size: 20px;
+  }
+
+  .rpa-button {
+    padding: 12px 30px;
+    font-size: 14px;
+  }
+
+  .resultado-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .resultado-item .item-value {
+    font-size: 24px;
+  }
+}

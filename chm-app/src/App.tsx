@@ -27,6 +27,7 @@ import { Medicos } from './components/Medicos/Medicos';
 import { Pacientes } from './components/Pacientes/Pacientes';
 import { RelatorioItens } from './components/Relatorios/RelatorioItens';
 import { Relatorios } from './components/Relatorios/Relatorios';
+import RPA from './components/RPA/RPA';
 import { Sobre } from './components/Sobre/Sobre';
 import WhatsAppButton from './components/WhatsApp/WhatsAppButton';
 
@@ -47,6 +48,7 @@ const App: React.FC = () => {
       case 'relatorio-itens': return <RelatorioItens />;
       case 'dashboard': return <Dashboard />;
       case 'backup': return <Backup />;
+      case 'rpa': return <RPA />;
       case 'sobre': return <Sobre />;
       default: return <Pacientes />;
     }
@@ -127,6 +129,15 @@ const App: React.FC = () => {
               icon={<DatabaseBackup size={20} />}
               active={abaAtiva === 'backup'}
               onClick={() => setAbaAtiva('backup')}
+            />
+            {/* =============================================================
+                🤖 MENU RPA - Migração Firebird → MongoDB
+                ============================================================= */}
+            <MenuItem
+              label="🤖 RPA Migração"
+              icon={<Zap size={20} />}
+              active={abaAtiva === 'rpa'}
+              onClick={() => setAbaAtiva('rpa')}
             />
             <MenuItem
               label="Sobre"
