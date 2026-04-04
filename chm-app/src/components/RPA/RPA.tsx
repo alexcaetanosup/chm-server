@@ -1,58 +1,48 @@
-/**
- * ============================================================
- * 🤖 COMPONENTE REACT: RPA FIREBIRD → MONGODB
- * ============================================================
- * Componente que permite executar a migração via interface
- * com status em tempo real
- * ============================================================
- */
-
 import axios from "axios";
 import { useState } from "react";
 import "./RPA.module.css";
 
-export default function RPA() {
-    const [executing, setExecuting] = useState(false);
-    const [status, setStatus] = useState(null);
-    const [logs, setLogs] = useState([]);
-    const [resultado, setResultado] = useState(null);
+interface MigrationResult {
+    especialidades?: { contagem: number };
+    pacientes?: { contagem: number };
+    medicos?: { contagem: number };
+    parcelam?: { contagem: number }; // LANÇAMENTOS
+    lancamentos?: { contagem: number }; // Alias para PARCELAM
+    usuarios?: { contagem: number };
+}
 
-    // ============================================================
-    // Executar RPA
-    // ============================================================
+type StatusType = "sucesso" | "erro" | null;
+
+export default function RPA() {
+    const [executing, setExecuting] = useState<boolean>(false);
+    const [status, setStatus] = useState<StatusType>(null);
+    const [logs, setLogs] = useState<string[]>([]);
+    const [resultado, setResultado] = useState<MigrationResult | null>(null);
+
     const executarRPA = async () => {
         setExecuting(true);
         setLogs(["🚀 Iniciando RPA...\n"]);
         setResultado(null);
+        setStatus(null);
 
         try {
-            const response = await axios.post("/api/migrate", {
+            const backendURL = process.env.REACT_APP_BACKEND_URL || "http://localhost:4000";
+            const response = await axios.post(`${backendURL}/api/migrate`, {
                 mongoUrl: process.env.REACT_APP_MONGO_URL || "",
             });
 
             if (response.data.sucesso) {
                 setStatus("sucesso");
-                setLogs((prev) => [
-                    ...prev,
-                    `\n✅ Migração concluída!\n`,
-                    `📊 Resultado:\n`,
-                    `   • Especialidades: ${response.data.resultados.especialidades}\n`,
-                    `   • Pacientes: ${response.data.resultados.pacientes}\n`,
-                    `   • Médicos: ${response.data.resultados.medicos}\n`,
-                    `   • Lançamentos: ${response.data.resultados.parcelam}\n`,
-                    `   ⏱️  Tempo: ${response.data.tempo}s\n`,
-                ]);
+                setLogs((prev) => [...prev, `\n✅ Migração concluída com sucesso!\n`]);
                 setResultado(response.data.resultados);
             } else {
                 setStatus("erro");
                 setLogs((prev) => [...prev, `\n❌ Erro: ${response.data.erro}\n`]);
             }
-        } catch (err) {
+        } catch (err: any) {
             setStatus("erro");
-            setLogs((prev) => [
-                ...prev,
-                `\n❌ Erro de conexão: ${err.message}\n`,
-            ]);
+            const errorMessage = err?.message || "Erro desconhecido";
+            setLogs((prev) => [...prev, `\n❌ Erro de conexão: ${errorMessage}\n`]);
             console.error("Erro RPA:", err);
         } finally {
             setExecuting(false);
@@ -62,91 +52,106 @@ export default function RPA() {
     return (
         <div className="rpa-container">
             <div className="rpa-header">
-                <h2>🤖 RPA - Migração Firebird → MongoDB</h2>
-                <p>Sincronize seus dados do banco Firebird para MongoDB Atlas</p>
+                <div className="rpa-header-content">
+                    <h1>🤖 Migração Firebird → MongoDB</h1>
+                    <p className="rpa-subtitle">Sincronize seus dados com segurança para o MongoDB Atlas</p>
+                </div>
             </div>
 
             <div className="rpa-content">
-                {/* Botão Executar */}
-                <div className="rpa-button-group">
-                    <button
-                        className={`rpa-button ${executing ? "loading" : ""} ${status ? status : ""
-                            }`}
-                        onClick={executarRPA}
-                        disabled={executing}
-                    >
-                        {executing ? (
-                            <>
-                                <span className="spinner"></span>
-                                Executando...
-                            </>
-                        ) : (
-                            <>
-                                <span className="icon">🤖</span>
-                                Executar Migração
-                            </>
-                        )}
-                    </button>
+                <div className={`rpa-card rpa-card-main ${status ? `rpa-card-${status}` : ""}`}>
+                    <div className="rpa-info">
+                        <div className="rpa-info-item">
+                            <span className="info-label">Origem</span>
+                            <span className="info-value">Firebird 2.5</span>
+                        </div>
+                        <div className="rpa-info-item">
+                            <span className="info-label">Destino</span>
+                            <span className="info-value">MongoDB Atlas</span>
+                        </div>
+                        <div className="rpa-info-item">
+                            <span className="info-label">Status</span>
+                            <span className={`info-value status-badge ${status || "pendente"}`}>
+                                {status === "sucesso" && "✅ Sucesso"}
+                                {status === "erro" && "❌ Erro"}
+                                {!status && "⏳ Pronto"}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="rpa-button-group">
+                        <button
+                            className={`rpa-button ${executing ? "loading" : ""} ${status ? status : ""}`}
+                            onClick={executarRPA}
+                            disabled={executing}
+                        >
+                            {executing ? (
+                                <>
+                                    <span className="spinner"></span>
+                                    Processando migração...
+                                </>
+                            ) : (
+                                <>
+                                    <span className="icon">🚀</span>
+                                    {status === "sucesso" ? "Migração Concluída" : "Executar Migração"}
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
 
-                {/* Status */}
-                {status && (
-                    <div className={`rpa-status status-${status}`}>
-                        {status === "sucesso" ? (
-                            <>
-                                <span className="status-icon">✅</span>
-                                <span>Migração concluída com sucesso!</span>
-                            </>
-                        ) : (
-                            <>
-                                <span className="status-icon">❌</span>
-                                <span>Erro durante a migração</span>
-                            </>
-                        )}
-                    </div>
-                )}
-
-                {/* Logs */}
-                {logs.length > 0 && (
-                    <div className="rpa-logs">
-                        <h3>📋 Logs:</h3>
-                        <div className="logs-content">
-                            {logs.map((log, i) => (
-                                <pre key={i}>{log}</pre>
-                            ))}
+                {resultado && (
+                    <div className="rpa-results">
+                        <h3 className="rpa-results-title">📊 Resumo da Migração</h3>
+                        <div className="rpa-results-grid">
+                            <div className="rpa-result-card">
+                                <div className="result-icon">📋</div>
+                                <div className="result-info">
+                                    <div className="result-label">Especialidades</div>
+                                    <div className="result-value">{resultado.especialidades?.contagem || 0}</div>
+                                </div>
+                            </div>
+                            <div className="rpa-result-card">
+                                <div className="result-icon">👥</div>
+                                <div className="result-info">
+                                    <div className="result-label">Pacientes</div>
+                                    <div className="result-value">{resultado.pacientes?.contagem || 0}</div>
+                                </div>
+                            </div>
+                            <div className="rpa-result-card">
+                                <div className="result-icon">🏥</div>
+                                <div className="result-info">
+                                    <div className="result-label">Médicos</div>
+                                    <div className="result-value">{resultado.medicos?.contagem || 0}</div>
+                                </div>
+                            </div>
+                            <div className="rpa-result-card">
+                                <div className="result-icon">💰</div>
+                                <div className="result-info">
+                                    <div className="result-label">Lançamentos</div>
+                                    <div className="result-value">{resultado.parcelam?.contagem || 0}</div>
+                                </div>
+                            </div>
+                            <div className="rpa-result-card">
+                                <div className="result-icon">👤</div>
+                                <div className="result-info">
+                                    <div className="result-label">Usuários</div>
+                                    <div className="result-value">{resultado.usuarios?.contagem || 0}</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
 
-                {/* Resultado */}
-                {resultado && (
-                    <div className="rpa-resultado">
-                        <h3>📊 Resumo da Migração:</h3>
-                        <div className="resultado-grid">
-                            <div className="resultado-item">
-                                <span className="item-label">Especialidades</span>
-                                <span className="item-value">
-                                    {resultado.especialidades?.contagem || 0}
-                                </span>
-                            </div>
-                            <div className="resultado-item">
-                                <span className="item-label">Pacientes</span>
-                                <span className="item-value">
-                                    {resultado.pacientes?.contagem || 0}
-                                </span>
-                            </div>
-                            <div className="resultado-item">
-                                <span className="item-label">Médicos</span>
-                                <span className="item-value">
-                                    {resultado.medicos?.contagem || 0}
-                                </span>
-                            </div>
-                            <div className="resultado-item">
-                                <span className="item-label">Lançamentos</span>
-                                <span className="item-value">
-                                    {resultado.parcelam?.contagem || 0}
-                                </span>
-                            </div>
+                {logs.length > 0 && (
+                    <div className="rpa-logs">
+                        <h3 className="rpa-logs-title">📜 Logs da Migração</h3>
+                        <div className="rpa-logs-content">
+                            {logs.map((log, idx) => (
+                                <div key={idx} className="log-line">
+                                    {log}
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}

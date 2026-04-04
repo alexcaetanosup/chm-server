@@ -66,11 +66,11 @@ export const Sobre: React.FC = () => {
                         /> */}
 
 
-                        <p className={styles.nome}>
+                        <div className={styles.nome}>
                             <h2>ACSInfo</h2>
                             <h3>+55 (15) 99768-6416</h3>
                             <h3>Alex Caetano dos Santos</h3>
-                        </p>
+                        </div>
                     </div>
 
                     <p className={styles.descricao}>

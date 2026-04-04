@@ -10,7 +10,8 @@ import {
   Info,
   LayoutDashboard,
   Stethoscope,
-  Users
+  Users,
+  Zap
 } from 'lucide-react';
 import React, { useState } from 'react';
 

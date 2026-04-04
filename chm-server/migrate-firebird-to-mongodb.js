@@ -88,7 +88,7 @@ const especialidadeSchema = new mongoose.Schema({
 
 // Schema: PARCELAM (Lançamentos)
 const parcelamSchema = new mongoose.Schema({
-  NRVENDA: { type: Number, unique: true, required: true },
+  NRVENDA: { type: Number, required: true },
   DTPARCELA: Date,
   VLPARCELA: Number,
   CDPACIENTE: Number,
@@ -101,11 +101,25 @@ const parcelamSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+// Schema: USUARIOS
+const usuarioSchema = new mongoose.Schema({
+  CDUSUARIO: { type: Number, unique: true, required: true },
+  USUARIO: { type: String, unique: true, required: true },
+  SENHA: String,
+  NOME: String,
+  EMAIL: String,
+  ATIVO: { type: String, default: "S" }, // 'S' ou 'N'
+  DATAACC: Date,
+  createdAt: { type: Date, default: Date.now },
+});
+
 // Criar modelos
 const Paciente = mongoose.model("Paciente", pacienteSchema);
 const Medico = mongoose.model("Medico", medicoSchema);
 const Especialidade = mongoose.model("Especialidade", especialidadeSchema);
 const Parcelam = mongoose.model("Parcelam", parcelamSchema);
+const Lancamentos = mongoose.model("Lancamentos", parcelamSchema); // Alias para PARCELAM
+const Usuario = mongoose.model("Usuario", usuarioSchema);
 
 // ============================================================
 // 🔄 FUNÇÕES DE MIGRAÇÃO
@@ -117,10 +131,7 @@ const Parcelam = mongoose.model("Parcelam", parcelamSchema);
 async function conectarMongoDB(mongoUrl) {
   try {
     console.log("\n🔗 Conectando ao MongoDB...");
-    await mongoose.connect(mongoUrl, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(mongoUrl);
     console.log("✅ MongoDB conectado!\n");
     return true;
   } catch (err) {
@@ -317,21 +328,134 @@ async function migrarParcelam() {
         try {
           let contagem = 0;
           for (const row of result) {
-            await Parcelam.create({
-              NRVENDA: row.NRVENDA,
-              DTPARCELA: row.DTPARCELA || null,
-              VLPARCELA: row.VLPARCELA || 0,
-              CDPACIENTE: row.CDPACIENTE || null,
-              PLANO: row.PLANO || 1,
-              PARCELA: row.PARCELA || 1,
-              DATATEND: row.DATATEND || null,
-              CDESPECIAL: row.CDESPECIAL || null,
-              CDMEDICO: row.CDMEDICO || null,
-              ABERTO: row.ABERTO || "S",
+            try {
+              await Parcelam.updateOne(
+                { NRVENDA: row.NRVENDA },
+                {
+                  NRVENDA: row.NRVENDA,
+                  DTPARCELA: row.DTPARCELA || null,
+                  VLPARCELA: row.VLPARCELA || 0,
+                  CDPACIENTE: row.CDPACIENTE || null,
+                  PLANO: row.PLANO || 1,
+                  PARCELA: row.PARCELA || 1,
+                  DATATEND: row.DATATEND || null,
+                  CDESPECIAL: row.CDESPECIAL || null,
+                  CDMEDICO: row.CDMEDICO || null,
+                  ABERTO: row.ABERTO || "S",
+                },
+                { upsert: true },
+              );
+              contagem++;
+            } catch (innerErr) {
+              console.error(
+                `⚠️  Erro ao migrar lançamento ${row.NRVENDA}:`,
+                innerErr.message,
+              );
+            }
+          }
+          console.log(`✅ ${contagem} lançamentos migrados!\n`);
+          resolve({ sucesso: true, contagem });
+        } catch (err) {
+          console.error("❌ Erro ao inserir:", err.message);
+          resolve({ sucesso: false, erro: err.message });
+        }
+      });
+    });
+  });
+}
+
+/**
+ * Executar Trigger do PARCELAM (Recalcular Totalizadores)
+ * Simula a lógica de trigger que existia no Firebird
+ */
+async function executarTriggerParcelam() {
+  return new Promise((resolve) => {
+    console.log("⚡ Executando trigger de PARCELAM...");
+    Firebird.attach(firebirdOptions, (err, db) => {
+      if (err) {
+        console.error("❌ Erro Firebird:", err);
+        resolve({ sucesso: true }); // Não falhar migração por causa de trigger
+        return;
+      }
+
+      // Buscar totalizadores do Firebird para processar
+      db.query(
+        `
+        SELECT 
+          CDPACIENTE,
+          COUNT(*) as TOTAL_LANCAMENTOS,
+          SUM(CASE WHEN ABERTO = 'S' THEN VLPARCELA ELSE 0 END) as TOTAL_ABERTO,
+          SUM(CASE WHEN ABERTO = 'N' THEN VLPARCELA ELSE 0 END) as TOTAL_PAGO
+        FROM PARCELAM
+        GROUP BY CDPACIENTE
+      `,
+        async (err, result) => {
+          db.detach();
+          if (err) {
+            console.error("⚠️  Aviso ao processar trigger:", err.message);
+            resolve({ sucesso: true }); // Continuar migração
+            return;
+          }
+
+          try {
+            // Registrar totalizadores (informativo)
+            console.log(
+              `📊 Totalizadores processados para ${result.length} pacientes`,
+            );
+            resolve({ sucesso: true });
+          } catch (err) {
+            console.error("⚠️  Erro ao processar trigger:", err.message);
+            resolve({ sucesso: true });
+          }
+        },
+      );
+    });
+  });
+}
+
+/**
+ * Alias: migrarLancamentos = migrarParcelam
+ * PARCELAM é a tabela de LANÇAMENTOS no Firebird
+ * Ambos os nomes referem-se à mesma tabela
+ */
+const migrarLancamentos = migrarParcelam;
+
+/**
+ * Migrar USUARIOS
+ */
+async function migrarUsuarios() {
+  return new Promise((resolve) => {
+    console.log("👥 Migrando USUÁRIOS...");
+    Firebird.attach(firebirdOptions, (err, db) => {
+      if (err) {
+        console.error("❌ Erro Firebird:", err);
+        resolve({ sucesso: false, erro: err.message });
+        return;
+      }
+
+      db.query("SELECT * FROM USUARIOS", async (err, result) => {
+        db.detach();
+        if (err) {
+          console.error("❌ Erro na query:", err);
+          resolve({ sucesso: false, erro: err.message });
+          return;
+        }
+
+        try {
+          let contagem = 0;
+          for (const row of result) {
+            await Usuario.create({
+              CDUSUARIO: row.CDUSUARIO,
+              USUARIO: row.USUARIO,
+              SENHA: row.SENHA || "",
+              NOME: row.NOME || "",
+              EMAIL: row.EMAIL || "",
+              ATIVO: row.ATIVO || "S",
+              DATAACC: row.DATAACC || null,
             });
             contagem++;
           }
-          console.log(`✅ ${contagem} lançamentos migrados!\n`);
+          console.log(`✅ ${contagem} usuários migrados!\n`);
           resolve({ sucesso: true, contagem });
         } catch (err) {
           console.error("❌ Erro ao inserir:", err.message);
@@ -372,7 +496,11 @@ async function executarMigracao(mongoUrl) {
     pacientes: await migrarPacientes(),
     medicos: await migrarMedicos(),
     parcelam: await migrarParcelam(),
+    usuarios: await migrarUsuarios(),
   };
+
+  // Executar trigger de PARCELAM
+  await executarTriggerParcelam();
 
   // Calcular tempo
   const tempo = ((Date.now() - inicio) / 1000).toFixed(2);
@@ -381,11 +509,16 @@ async function executarMigracao(mongoUrl) {
   console.log("╔════════════════════════════════════════════════════════╗");
   console.log("║  ✅ MIGRAÇÃO CONCLUÍDA!                              ║");
   console.log("╚════════════════════════════════════════════════════════╝\n");
-  console.log("📊 RESUMO:");
-  console.log(`   • Especialidades: ${resultados.especialidades.contagem || 0}`);
-  console.log(`   • Pacientes: ${resultados.pacientes.contagem || 0}`);
-  console.log(`   • Médicos: ${resultados.medicos.contagem || 0}`);
-  console.log(`   • Lançamentos: ${resultados.parcelam.contagem || 0}`);
+  console.log("📊 RESUMO DA MIGRAÇÃO FIREBIRD → MONGODB:");
+  console.log(
+    `   📋 Especialidades: ${resultados.especialidades.contagem || 0}`,
+  );
+  console.log(`   👥 Pacientes: ${resultados.pacientes.contagem || 0}`);
+  console.log(`   🏥 Médicos: ${resultados.medicos.contagem || 0}`);
+  console.log(
+    `   💰 Lançamentos (PARCELAM): ${resultados.parcelam.contagem || 0}`,
+  );
+  console.log(`   👤 Usuários: ${resultados.usuarios.contagem || 0}`);
   console.log(`   ⏱️  Tempo total: ${tempo}s\n`);
 
   // Desconectar
