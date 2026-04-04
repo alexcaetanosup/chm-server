@@ -1,38 +1,74 @@
 require("dotenv").config();
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
 const { exec } = require("child_process");
 const express = require("express");
 const Firebird = require("node-firebird");
-const cors = require("cors"); // Importado uma única vez
+const cors = require("cors");
 const multer = require("multer");
 
 const app = express();
 
-// CONFIGURAÇÃO ÚNICA DE CORS
-app.use(
-  cors({
-    origin: ["http://localhost:3000", "http://localhost:5173"], // Aceita ambas as portas
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  }),
+// =============================================================
+// 🌍 DETECÇÃO DE AMBIENTE (Windows ou Linux/AWS)
+// =============================================================
+const isWindows = os.platform() === "win32";
+const isLinux = os.platform() === "linux";
+
+console.log(`\n🖥️  Sistema Operacional: ${isWindows ? "Windows" : "Linux"}`);
+console.log(
+  `📍 Ambiente: ${isLinux ? "AWS/PRODUÇÃO" : "LOCAL/DESENVOLVIMENTO"}\n`,
 );
+
+// =============================================================
+// 🔒 CONFIGURAÇÃO CORS (Dinâmica conforme Ambiente)
+// =============================================================
+let corsOptions = {
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+if (isWindows) {
+  // LOCAL (Windows): Aceita localhost e 5173
+  corsOptions.origin = ["http://localhost:3000", "http://localhost:5173"];
+  console.log("✅ CORS configurado para LOCALHOST");
+} else if (isLinux) {
+  // AWS/PRODUÇÃO (Linux): Aceita qualquer origem por enquanto
+  corsOptions.origin = true;
+  console.log("✅ CORS configurado para AWS (qualquer origem temporariamente)");
+  console.log("⚠️  Recomendação: Restricione após configurar domínio\n");
+}
+
+app.use(cors(corsOptions));
 
 app.use(express.json());
 
 // Rota de teste
 app.get("/api/health", (req, res) => res.send("Servidor Ativo!"));
 
-// --- CONFIGURAÇÃO DO FIREBIRD 2.5.9 ---
+// =============================================================
+// 🗄️  CONFIGURAÇÃO DO FIREBIRD 2.5 (DINÂMICA)
+// =============================================================
+// Detecta automaticamente o caminho do banco conforme o SO:
+// - Windows: C:\WWW\CHM\chm-server\CHM.FDB
+// - Linux/AWS: /home/ubuntu/CHM/chm-server/CHM.FDB
+// =============================================================
+const dbPath = isWindows
+  ? "C:\\WWW\\CHM\\chm-server\\CHM.FDB"
+  : "/home/ubuntu/CHM/chm-server/CHM.FDB";
+
+console.log(`📁 Caminho do Banco: ${dbPath}\n`);
+
 const options = {
-  host: "127.0.0.1",
-  port: 3050,
-  database: "C:\\WWW\\CHM\\chm-server\\CHM.FDB",
-  user: "SYSDBA",
-  password: "masterkey",
-  lowercase_keys: false,
-  pageSize: 4096,
+  host: "127.0.0.1", // Sempre localhost (servidor local)
+  port: 3050, // Porta padrão Firebird
+  database: dbPath, // Detectado conforme SO
+  user: "SYSDBA", // Usuário padrão Firebird
+  password: "masterkey", // Senha padrão
+  lowercase_keys: false, // Mantém nomes de colunas como no banco
+  pageSize: 4096, // Tamanho de página
 };
 
 // --- HELPER FUNCTIONS ---
@@ -53,8 +89,22 @@ function toInteger(value) {
 }
 
 //======================Tratamento da Foto==========
+// =============================================================
+// 📸 CONFIGURAÇÃO DE UPLOADS (Dinâmica conforme Ambiente)
+// =============================================================
+// Define o caminho e URL da pasta uploads conforme SO:
+// - Windows: ./uploads/ (relativo ao servidor.js)
+// - Linux/AWS: /home/ubuntu/CHM/chm-server/uploads/
+// =============================================================
+const uploadDir = isWindows
+  ? "uploads/"
+  : "/home/ubuntu/CHM/chm-server/uploads/";
+const uploadUrl = isWindows
+  ? "http://localhost:4000/uploads/"
+  : `http://${process.env.AWS_IP || "seu-ip-aws"}:4000/uploads/`;
+
 const storage = multer.diskStorage({
-  destination: "uploads/",
+  destination: uploadDir,
   filename: (req, file, cb) => {
     cb(null, Date.now() + "-" + file.originalname);
   },
@@ -64,11 +114,11 @@ const upload = multer({ storage });
 
 app.post("/upload", upload.single("foto"), (req, res) => {
   res.json({
-    url: "http://localhost:4000/uploads/" + req.file.filename,
+    url: uploadUrl + req.file.filename,
   });
 });
 
-app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static(uploadDir));
 
 //===========================================================
 
@@ -591,11 +641,25 @@ app.post("/api/backup/firebird", (req, res) => {
   const hora = agora.getHours().toString().padStart(2, "0");
   const minuto = agora.getMinutes().toString().padStart(2, "0");
 
-  // 1. Localiza o GBAK na raiz do seu servidor
-  const GBAK_PATH = path.resolve(__dirname, "gbak.exe");
+  // =============================================================
+  // 🔧 DETECTAR GBAK CONFORME SO
+  // =============================================================
+  // Windows: gbak.exe na pasta do servidor
+  // Linux/AWS: comando 'gbak' instalado no sistema
+  // =============================================================
+  const GBAK_PATH = isWindows
+    ? path.resolve(__dirname, "gbak.exe")
+    : "/usr/lib/firebird/2.5/bin/gbak";
 
-  // 2. Define a estrutura conforme solicitado: C:\WWW\Backups\2026\03\30\DIARIO\
-  const DESTINO_DIR = path.join("C:", "WWW", "Backups", ano, mes, dia, tipo);
+  // =============================================================
+  // 📂 ESTRUTURA DE PASTAS DE BACKUP
+  // =============================================================
+  // Windows: C:\WWW\Backups\2026\04\04\DIARIO\
+  // Linux/AWS: /home/ubuntu/CHM/backups/2026/04/04/DIARIO/
+  // =============================================================
+  const DESTINO_DIR = isWindows
+    ? path.join("C:", "WWW", "Backups", ano, mes, dia, tipo)
+    : `/home/ubuntu/CHM/backups/${ano}/${mes}/${dia}/${tipo}`;
 
   try {
     // Cria as pastas caso não existam
@@ -603,23 +667,32 @@ app.post("/api/backup/firebird", (req, res) => {
       fs.mkdirSync(DESTINO_DIR, { recursive: true });
     }
 
-    // 3. Nome do arquivo com timestamp para não sobrescrever
+    // Nome do arquivo com timestamp para não sobrescrever
     const NOME_ARQUIVO = `BACKUP_CHM_${hora}${minuto}.FBK`;
     const CAMINHO_COMPLETO = path.join(DESTINO_DIR, NOME_ARQUIVO);
 
-    // Caminho do banco e credenciais
-    const DB_PATH = "C:\\WWW\\CHM\\chm-server\\CHM.FDB";
+    // Caminho do banco (mesmo do options acima)
+    const DB_PATH = dbPath;
     const USER = "SYSDBA";
     const PASS = "masterkey";
 
-    // 4. Montagem do Comando GBAK (aspas duplas para evitar erros de espaços)
-    const comando = `"${GBAK_PATH}" -v -t -user ${USER} -password ${PASS} "${DB_PATH}" "${CAMINHO_COMPLETO}"`;
+    // =============================================================
+    // 📝 MONTAGEM DO COMANDO GBAK (adapta conforme SO)
+    // =============================================================
+    let comando;
+    if (isWindows) {
+      // Windows: aspas duplas para evitar erros de espaços
+      comando = `"${GBAK_PATH}" -v -t -user ${USER} -password ${PASS} "${DB_PATH}" "${CAMINHO_COMPLETO}"`;
+    } else {
+      // Linux: sem aspas duplas (caminho sem espaços)
+      comando = `${GBAK_PATH} -v -t -user ${USER} -password ${PASS} ${DB_PATH} ${CAMINHO_COMPLETO}`;
+    }
 
     console.log("------------------------------------------");
     console.log(`GERANDO BACKUP EM: ${DESTINO_DIR}`);
     console.log("------------------------------------------");
 
-    // 5. Execução do Processo via CLI
+    // Execução do Processo via CLI
     exec(comando, (error, stdout, stderr) => {
       if (error) {
         console.error("ERRO GBAK:", stderr || error.message);
@@ -703,4 +776,11 @@ Você conhece todas as funcionalidades do sistema:
 const PORT_FINAL = process.env.PORT || 4000;
 app.listen(PORT_FINAL, () => {
   console.log(`🚀 SERVIDOR CHM RODANDO NA PORTA ${PORT_FINAL}`);
+  console.log(`\n=============================================================`);
+  console.log(`📊 CONFIGURAÇÃO ATUAL:`);
+  console.log(`   🖥️  SO: ${isWindows ? "Windows" : "Linux/AWS"}`);
+  console.log(`   📁 Banco: ${dbPath}`);
+  console.log(`   📸 Uploads: ${uploadDir}`);
+  console.log(`   🔒 CORS: ${JSON.stringify(corsOptions.origin).substring(0, 50)}...`);
+  console.log(`=============================================================\n`);
 });
