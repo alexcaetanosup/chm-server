@@ -532,10 +532,22 @@ async function executarMigracao(mongoUrl) {
 }
 
 // Exportar para usar no server.js
+// module.exports = {
+//   executarMigracao,
+//   Paciente,
+//   Medico,
+//   Especialidade,
+//   Parcelam,
+// };
+
+// Forçamos o Mongoose a olhar para a tabela 'parcelams'
+const Lancamento = mongoose.model("Lancamento", parcelamSchema, "parcelams");
+
 module.exports = {
   executarMigracao,
   Paciente,
   Medico,
   Especialidade,
   Parcelam,
+  Lancamento: Parcelam, // Isso faz o server.js entender o nome 'Lancamento'
 };

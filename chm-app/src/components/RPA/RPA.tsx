@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useState } from "react";
-import "./RPA.module.css";
+import styles from "./RPA.module.css";
 
 interface MigrationResult {
     especialidades?: { contagem: number };
@@ -18,12 +18,16 @@ export default function RPA() {
     const [status, setStatus] = useState<StatusType>(null);
     const [logs, setLogs] = useState<string[]>([]);
     const [resultado, setResultado] = useState<MigrationResult | null>(null);
+    const [tempoExecucao, setTempoExecucao] = useState<string>("");
 
     const executarRPA = async () => {
         setExecuting(true);
         setLogs(["🚀 Iniciando RPA...\n"]);
         setResultado(null);
         setStatus(null);
+        setTempoExecucao("");
+
+        const inicioTempo = Date.now();
 
         try {
             const backendURL = process.env.REACT_APP_BACKEND_URL || "http://localhost:4000";
@@ -32,6 +36,8 @@ export default function RPA() {
             });
 
             if (response.data.sucesso) {
+                const tempoTotal = ((Date.now() - inicioTempo) / 1000).toFixed(2);
+                setTempoExecucao(tempoTotal);
                 setStatus("sucesso");
                 setLogs((prev) => [...prev, `\n✅ Migração concluída com sucesso!\n`]);
                 setResultado(response.data.resultados);
@@ -50,105 +56,122 @@ export default function RPA() {
     };
 
     return (
-        <div className="rpa-container">
-            <div className="rpa-header">
-                <div className="rpa-header-content">
-                    <h1>🤖 Migração Firebird → MongoDB</h1>
-                    <p className="rpa-subtitle">Sincronize seus dados com segurança para o MongoDB Atlas</p>
+        <div className={styles["rpaContainer"]}>
+            <div className={styles["rpa-header"]}>
+                <div className={styles["rpa-header-icon"]}>🤖</div>
+                <div className={styles["rpa-header-content"]}>
+                    <h1>Migração Firebird → MongoDB</h1>
+                    <p>Sincronize seus dados com segurança para a nuvem</p>
                 </div>
             </div>
 
-            <div className="rpa-content">
-                <div className={`rpa-card rpa-card-main ${status ? `rpa-card-${status}` : ""}`}>
-                    <div className="rpa-info">
-                        <div className="rpa-info-item">
-                            <span className="info-label">Origem</span>
-                            <span className="info-value">Firebird 2.5</span>
+            <div className={styles["rpaContent"]}>
+                {/* INFO CARDS - Origem, Destino, Status */}
+                <div className={styles["rpa-info-section"]} >
+                    <div className={styles["info-card"]}>
+                        <div className={styles["info-icon"]}>📂</div>
+                        <div className={styles["info-text"]}>
+                            <span className={styles["info-label"]}>Origem</span>
+                            <span className={styles["info-value"]}>Firebird 2.5</span>
                         </div>
-                        <div className="rpa-info-item">
-                            <span className="info-label">Destino</span>
-                            <span className="info-value">MongoDB Atlas</span>
+                    </div>
+                    <div className={styles["info-arrow"]}>→</div>
+                    <div className={styles["info-card"]}>
+                        <div className={styles["info-icon"]}>☁️</div>
+                        <div className={styles["info-text"]}>
+                            <span className={styles["info-label"]}>Destino</span>
+                            <span className={styles["info-value"]}>MongoDB Atlas</span>
                         </div>
-                        <div className="rpa-info-item">
-                            <span className="info-label">Status</span>
-                            <span className={`info-value status-badge ${status || "pendente"}`}>
-                                {status === "sucesso" && "✅ Sucesso"}
-                                {status === "erro" && "❌ Erro"}
-                                {!status && "⏳ Pronto"}
+                    </div>
+                    <div className={styles["info-arrow"]}>•</div>
+                    <div className={`${styles["info-card"]} ${styles["status-card"]} ${status ? styles[status] : ""}`}>
+                        <div className={styles["info-icon"]}>{status === "sucesso" ? "✅" : status === "erro" ? "❌" : "⏳"}</div>
+                        <div className={styles["info-text"]}>
+                            <span className={styles["info-label"]}>Status</span>
+                            <span className={styles["info-value"]}>
+                                {status === "sucesso" && "Sucesso"}
+                                {status === "erro" && "Erro"}
+                                {!status && "Pronto"}
                             </span>
                         </div>
                     </div>
-
-                    <div className="rpa-button-group">
-                        <button
-                            className={`rpa-button ${executing ? "loading" : ""} ${status ? status : ""}`}
-                            onClick={executarRPA}
-                            disabled={executing}
-                        >
-                            {executing ? (
-                                <>
-                                    <span className="spinner"></span>
-                                    Processando migração...
-                                </>
-                            ) : (
-                                <>
-                                    <span className="icon">🚀</span>
-                                    {status === "sucesso" ? "Migração Concluída" : "Executar Migração"}
-                                </>
-                            )}
-                        </button>
-                    </div>
                 </div>
 
+                {/* ACTION BUTTON */}
+                <div className={styles["rpa-action"]}>
+                    <button
+                        className={`${styles["rpa-button"]} ${executing ? styles["loading"] : ""} ${status ? styles[status] : ""}`}
+                        onClick={executarRPA}
+                        disabled={executing}
+                    >
+                        {executing ? (
+                            <>
+                                <span className={styles["spinner"]}></span>
+                                Processando...
+                            </>
+                        ) : (
+                            <>
+                                <span className={styles["icon"]}>🚀</span>
+                                {status === "sucesso" ? "Migração Concluída" : "Executar Migração"}
+                            </>
+                        )}
+                    </button>
+                </div>
+
+                {/* RESULTADOS - Grid de Estatísticas */}
                 {resultado && (
-                    <div className="rpa-results">
-                        <h3 className="rpa-results-title">📊 Resumo da Migração</h3>
-                        <div className="rpa-results-grid">
-                            <div className="rpa-result-card">
-                                <div className="result-icon">📋</div>
-                                <div className="result-info">
-                                    <div className="result-label">Especialidades</div>
-                                    <div className="result-value">{resultado.especialidades?.contagem || 0}</div>
-                                </div>
+                    <div className={styles["rpa-stats-section"]}>
+                        <h2 className={styles["section-title"]}>📊 Resumo da Migração</h2>
+                        <div className={styles["stats-grid"]}>
+                            <div className={`$styles["stat-card"]} ${styles["especialidades"]}`}>
+                                <div className={styles["stat-icon"]}>📋</div>
+                                <div className={styles["stat-value"]}>{resultado.especialidades?.contagem || 0}</div>
+                                <div className={styles["stat-label"]}>Especialidades</div>
                             </div>
-                            <div className="rpa-result-card">
-                                <div className="result-icon">👥</div>
-                                <div className="result-info">
-                                    <div className="result-label">Pacientes</div>
-                                    <div className="result-value">{resultado.pacientes?.contagem || 0}</div>
-                                </div>
+
+                            {/* <div className={styles["stat-card pacientes"]}> */}
+                            <div className={`${styles["stat-card pacientes"]} ${styles["pacientes"]}`}>
+                                <div className={styles["stat-icon"]}>👥</div>
+                                <div className={styles["stat-value"]}>{resultado.pacientes?.contagem || 0}</div>
+                                <div className={styles["stat-label"]}>Pacientes</div>
                             </div>
-                            <div className="rpa-result-card">
-                                <div className="result-icon">🏥</div>
-                                <div className="result-info">
-                                    <div className="result-label">Médicos</div>
-                                    <div className="result-value">{resultado.medicos?.contagem || 0}</div>
-                                </div>
+
+                            <div className={`${styles["stat-card medicos"]} ${styles["medicos"]}`}>
+                                <div className={styles["stat-icon"]}>🏥</div>
+                                <div className={styles["stat-value"]}>{resultado.medicos?.contagem || 0}</div>
+                                <div className={styles["stat-label"]}>Médicos</div>
                             </div>
-                            <div className="rpa-result-card">
-                                <div className="result-icon">💰</div>
-                                <div className="result-info">
-                                    <div className="result-label">Lançamentos</div>
-                                    <div className="result-value">{resultado.parcelam?.contagem || 0}</div>
-                                </div>
+
+                            <div className={`${styles["stat-card lancamentos"]} ${styles["lancamentos"]}`}>
+                                <div className={styles["stat-icon"]}>💰</div>
+                                <div className={styles["stat-value"]}>{resultado.parcelam?.contagem || resultado.lancamentos?.contagem || 0}</div>
+                                <div className={styles["stat-label"]}>Lançamentos</div>
                             </div>
-                            <div className="rpa-result-card">
-                                <div className="result-icon">👤</div>
-                                <div className="result-info">
-                                    <div className="result-label">Usuários</div>
-                                    <div className="result-value">{resultado.usuarios?.contagem || 0}</div>
-                                </div>
+
+                            <div className={`${styles["stat-card usuarios"]} ${styles["usuarios"]}`}>
+                                <div className={styles["stat-icon"]}>👤</div>
+                                <div className={styles["stat-value"]}>{resultado.usuarios?.contagem || 0}</div>
+                                <div className={styles["stat-label"]}>Usuários</div>
                             </div>
+
+                            {tempoExecucao && (
+                                <div className={`${styles["stat-card tempo"]} ${styles["tempo"]}`}>
+                                    <div className={styles["stat-icon"]}>⏱️</div>
+                                    <div className={styles["stat-value"]}>{tempoExecucao}s</div>
+                                    <div className={styles["stat-label"]}>Tempo Total</div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
 
+                {/* LOGS */}
                 {logs.length > 0 && (
-                    <div className="rpa-logs">
-                        <h3 className="rpa-logs-title">📜 Logs da Migração</h3>
-                        <div className="rpa-logs-content">
+                    <div className={styles["rpa-logs-section"]}>
+                        <h2 className={styles["section-title"]}>📜 Logs da Migração</h2>
+                        <div className={styles["rpa-logs-content"]}>
                             {logs.map((log, idx) => (
-                                <div key={idx} className="log-line">
+                                <div key={idx} className={styles["log-line"]}>
                                     {log}
                                 </div>
                             ))}
@@ -156,6 +179,6 @@ export default function RPA() {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 }

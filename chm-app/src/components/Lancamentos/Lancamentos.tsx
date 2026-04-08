@@ -147,6 +147,15 @@ export const Lancamentos: React.FC = () => {
 
     };
 
+    const mapaPacientes = useMemo(() => {
+        const novoMapa: Record<string, string> = {};
+        pacientes.forEach(p => {
+            novoMapa[String(p.CDPACIENTE)] = p.DCPACIENTE;
+        });
+        return novoMapa;
+    }, [pacientes]);
+
+
     const handleSubmit = async (e: React.FormEvent) => {
 
         e.preventDefault();
@@ -315,34 +324,48 @@ export const Lancamentos: React.FC = () => {
                         {loading ? (
                             <tr><td colSpan={6} style={{ textAlign: 'center', padding: '20px' }}>Carregando...</td></tr>
                         ) : (
-                            lancamentosFiltrados.map((l, idx) => (
-                                <tr key={`${l.NRVENDA}-${l.DTPARCELA}-${idx}`}>
-                                    <td>{new Date(l.DATATEND).toLocaleDateString('pt-BR')}</td>
-                                    <td>{l.PACIENTE}</td>
-                                    <td>{l.MEDICO}</td>
-                                    <td className={styles.valorDireita}>
-                                        {Number(l.VLPARCELA).toLocaleString('pt-BR', {
-                                            style: 'currency',
-                                            currency: 'BRL'
-                                        })}
-                                    </td>
+                            lancamentosFiltrados.map((l: any, idx: number) => {
+                                // 🔍 Buscamos os nomes usando a lógica que você criou
+                                const pacienteNome = pacientes.find(p => String(p.CDPACIENTE) === String(l.CDPACIENTE))?.DCPACIENTE || `${l.CDPACIENTE}`;
+                                const medicoNome = medicos.find(m => String(m.CDMEDICO) === String(l.CDMEDICO))?.DCMEDICO || `${l.CDMEDICO}`;
 
-                                    <td>
-                                        <span className={`${styles.statusBadge} ${l.ABERTO === 'S' ? styles.pendente : styles.pago}`}>
-                                            {l.ABERTO === 'S' ? 'Pendente' : 'Pago'}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <button className={styles.btnIcon} onClick={() => setSelectedItem(l)}>
-                                            <Eye size={18} color="#6366f1" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
+
+                                // console.log para testar se está encontrando os pacientes corretamente
+                                // console.log('Buscando Paciente:', {
+                                //     idNoLancamento: l.CDPACIENTE,
+                                //     tipoNoLancamento: typeof l.CDPACIENTE,
+                                //     listaPacientes: pacientes
+                                // });
+
+
+                                return (
+                                    <tr key={`${l.NRVENDA}-${l.DTPARCELA}-${idx}`}>
+                                        <td>{new Date(l.DATATEND).toLocaleDateString('pt-BR')}</td>
+                                        <td>{pacienteNome}</td>
+                                        <td>{medicoNome}</td>
+                                        <td className={styles.valorDireita}>
+                                            {Number(l.VLPARCELA).toLocaleString('pt-BR', {
+                                                style: 'currency',
+                                                currency: 'BRL'
+                                            })}
+                                        </td>
+                                        <td>
+                                            <span className={`${styles.statusBadge} ${l.ABERTO === 'S' ? styles.pendente : styles.pago}`}>
+                                                {l.ABERTO === 'S' ? 'Pendente' : 'Pago'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button className={styles.btnIcon} onClick={() => setSelectedItem(l)}>
+                                                <Eye size={18} color="#6366f1" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })
                         )}
                     </tbody>
                 </table>
-            </div>
+            </div >
 
             {
                 isModalOpen && (
